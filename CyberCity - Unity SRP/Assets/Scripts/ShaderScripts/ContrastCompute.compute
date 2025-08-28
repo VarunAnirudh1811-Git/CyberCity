@@ -1,0 +1,168 @@
+﻿// ContrastCompute.compute
+// Computes per-object accumulations: object luminance, background luminance, ΔE76, pixel count
+// Output buffer: RWStructuredBuffer<uint4> _Results
+// Each uint4: (sumObjLum_scaled, sumBgLum_scaled, sumDeltaE_scaled, count)
+
+#pragma kernel CSMain
+#pragma enable_d3d11_debug_symbols
+
+// Thread group size
+[numthreads(8, 8, 1)]
+void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID);
+
+// Textures (inputs)
+Texture2D<float4> _ObjectTex; // RGB = linear object color, A = object ID / 255
+Texture2D<float4> _BackgroundTex; // RGBA in sRGB (we'll convert to linear)
+SamplerState samplerLinear;
+
+// Output results: each index corresponds to an object ID (we write into index == objectId)
+RWStructuredBuffer<uint4> _Results;
+
+// Constants
+cbuffer Params
+{
+    int _TexWidth;
+    int _TexHeight;
+    int _MaxObjects; // upper bound of tracked objects (IDs >= _MaxObjects are ignored)
+}
+
+// scale factor for converting floating accumulations into uint for atomics
+static const float SCALE = 1e6f;
+
+// --- helpers ---
+
+// sRGB -> Linear conversion (IEC 61966-2-1)
+float3 SRGBToLinear(float3 c)
+{
+    // piecewise conversion
+    float3 low = c / 12.92f;
+    float3 high = pow((c + 0.055f) / 1.055f, 2.4f);
+    // component-wise select
+    return (c <= 0.04045f) ? low : high;
+}
+
+// linear RGB -> XYZ conversion (D65, sRGB color space conversion matrix)
+float3 LinearRGBToXYZ(float3 rgb)
+{
+    // sRGB (linear) to XYZ (D65)
+    // Reference matrix (column-major when multiplied): 
+    // [ 0.4124564 0.3575761 0.1804375 ]
+    // [ 0.2126729 0.7151522 0.0721750 ]
+    // [ 0.0193339 0.1191920 0.9503041 ]
+    float X = rgb.r * 0.4124564f + rgb.g * 0.3575761f + rgb.b * 0.1804375f;
+    float Y = rgb.r * 0.2126729f + rgb.g * 0.7151522f + rgb.b * 0.0721750f;
+    float Z = rgb.r * 0.0193339f + rgb.g * 0.1191920f + rgb.b * 0.9503041f;
+    return float3(X, Y, Z);
+}
+
+// XYZ -> Lab (D65 reference white). Uses CIE standard.
+float3 XYZToLab(float3 xyz)
+{
+    // D65 reference white (Xn, Yn, Zn)
+    const float Xn = 0.95047f;
+    const float Yn = 1.00000f;
+    const float Zn = 1.08883f;
+
+    float3 v = float3(xyz.x / Xn, xyz.y / Yn, xyz.z / Zn);
+
+    // f(t) piecewise
+    const float eps = 0.008856f; // (6/29)^3
+    const float kappa = 903.3f; // (29/3)^3
+
+    float3 f;
+    // If t > eps -> f = t^(1/3) else f = (kappa * t + 16) / 116
+    f.x = (v.x > eps) ? pow(v.x, 1.0f / 3.0f) : ((kappa * v.x + 16.0f) / 116.0f);
+    f.y = (v.y > eps) ? pow(v.y, 1.0f / 3.0f) : ((kappa * v.y + 16.0f) / 116.0f);
+    f.z = (v.z > eps) ? pow(v.z, 1.0f / 3.0f) : ((kappa * v.z + 16.0f) / 116.0f);
+
+    float L = 116.0f * f.y - 16.0f;
+    float a = 500.0f * (f.x - f.y);
+    float b = 200.0f * (f.y - f.z);
+    return float3(L, a, b);
+}
+
+// Compute relative luminance given linear RGB (rec. 709 weights)
+float RelativeLuminance(float3 linearRGB)
+{
+    return dot(linearRGB, float3(0.2126f, 0.7152f, 0.0722f));
+}
+
+// Safe integer rounding to nearest int for objectId decode
+int DecodeObjectId(float alpha)
+{
+    // clamp then round to nearest integer in [0,255]
+    float clamped = clamp(alpha, 0.0f, 1.0f);
+    return (int) round(clamped * 255.0f);
+}
+
+// --- main kernel ---
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
+{
+    uint x = dispatchThreadID.x;
+    uint y = dispatchThreadID.y;
+
+    // bounds check
+    if (x >= (uint) _TexWidth || y >= (uint) _TexHeight)
+        return;
+
+    // use integer texel coordinates for exact reads (no filtering)
+    int2 coord = int2(x, y);
+
+    // Load object pixel (RGBA: linear RGB, alpha = objectID/255)
+    float4 objPixel = _ObjectTex.Load(int3(coord, 0)); // linear RGB in RGB, alpha encodes ID/255
+
+    // Skip transparent / no-object pixels
+    if (objPixel.a <= 0.001f)
+        return;
+
+    int objectId = DecodeObjectId(objPixel.a);
+    // filter invalid IDs: skip id==0 and id >= _MaxObjects
+    if (objectId <= 0 || objectId >= _MaxObjects)
+        return;
+
+    // Load background pixel (sRGB) and convert to linear
+    float4 bgPixel_srgb = _BackgroundTex.Load(int3(coord, 0));
+    float3 bgLinear = SRGBToLinear(bgPixel_srgb.rgb);
+
+    // object color already in linear
+    float3 objLinear = objPixel.rgb;
+
+    // compute relative luminance for both
+    float objLum = RelativeLuminance(objLinear);
+    float bgLum = RelativeLuminance(bgLinear);
+
+    // convert both to Lab
+    float3 objXYZ = LinearRGBToXYZ(objLinear);
+    float3 bgXYZ = LinearRGBToXYZ(bgLinear);
+
+    float3 objLab = XYZToLab(objXYZ);
+    float3 bgLab = XYZToLab(bgXYZ);
+
+    // ΔE76
+    float dL = objLab.x - bgLab.x;
+    float da = objLab.y - bgLab.y;
+    float db = objLab.z - bgLab.z;
+    float deltaE = sqrt(dL * dL + da * da + db * db);
+
+    // Scale floats and convert to uint for atomic accumulation
+    uint scaledObjLum = (uint) round(saturate(objLum) * SCALE);
+    uint scaledBgLum = (uint) round(saturate(bgLum) * SCALE);
+    // deltaE might be larger than 1; clamp to a reasonable max before scaling to avoid overflow
+    // You can modify the clampMax if you expect larger deltaE values.
+    const float deltaEClampMax = 1000.0f;
+    uint scaledDeltaE = (uint) round(clamp(deltaE, 0.0f, deltaEClampMax) * SCALE);
+
+    uint idx = (uint) objectId; // store in _Results[index == objectId]
+    // Perform atomic adds into the structured buffer
+    // Note: InterlockedAdd supports uint l-values for RWStructuredBuffer elements
+    // Accumulate sumObjLum (x)
+    InterlockedAdd(_Results[idx].x, scaledObjLum);
+    // Accumulate sumBgLum (y)
+    InterlockedAdd(_Results[idx].y, scaledBgLum);
+    // Accumulate sumDeltaE (z)
+    InterlockedAdd(_Results[idx].z, scaledDeltaE);
+    // Increment count (w)
+    InterlockedAdd(_Results[idx].w, 1u);
+}
