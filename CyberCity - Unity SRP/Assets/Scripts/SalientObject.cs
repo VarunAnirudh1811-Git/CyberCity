@@ -21,18 +21,11 @@ public class SalientObject : MonoBehaviour
     [Tooltip("Maximum distance considered for proximity cue.")]
     [SerializeField] private float maxDistance = 10f;
 
-    [Header("Weights")]
-    [Range(0f, 1f)] public float motionWeight = 0.25f;
-    [Range(0f, 1f)] public float proximityWeight = 0.25f;
-    [Range(0f, 1f)] public float colorWeight = 0.25f;
-    [Range(0f, 1f)] public float luminanceWeight = 0.25f;
-
     [Header("Debug (Read-Only)")]
     [SerializeField, ReadOnly] private float normalizedMotion;
     [SerializeField, ReadOnly] private float normalizedProximity;
     [SerializeField, ReadOnly] private float normalizedColorContrast;
     [SerializeField, ReadOnly] private float normalizedLuminanceContrast;
-    [SerializeField, ReadOnly] private float saliencyScore;
     [SerializeField, ReadOnly] private Color backgroundColor;
 
     // Cached values
@@ -51,16 +44,13 @@ public class SalientObject : MonoBehaviour
         }
 
         npcEyeTransform = Camera.main?.transform; // Default to main camera if not set
-
-        ComputeColorAndLuminanceContrast();
-                
+                        
     }
 
     private void Update()
     {
         ComputeMotion();
         ComputeProximity();
-        ComputeSaliencyScore();
         ComputeColorAndLuminanceContrast();
     }
 
@@ -134,21 +124,6 @@ public class SalientObject : MonoBehaviour
         normalizedLuminanceContrast = Mathf.Clamp01(lumContrast);
     }
 
-    /// <summary> Computes weighted saliency score. </summary>
-    private void ComputeSaliencyScore()
-    {
-        saliencyScore =
-            (motionWeight * normalizedMotion) +
-            (proximityWeight * normalizedProximity) +
-            (colorWeight * normalizedColorContrast) +
-            (luminanceWeight * normalizedLuminanceContrast);
-
-        saliencyScore = Mathf.Clamp01(saliencyScore);
-    }
-
-    /// <summary> Expose saliency score for external systems. </summary>
-    public float GetSaliencyScore() => saliencyScore;
-
     /// <summary> Expose raw normalized cues. </summary>
     public float NormalizedMotion => normalizedMotion;
     public float NormalizedProximity => normalizedProximity;
@@ -163,8 +138,7 @@ public class SalientObject : MonoBehaviour
             normalizedMotion,
             normalizedProximity,
             normalizedColorContrast,
-            normalizedLuminanceContrast,
-            saliencyScore
+            normalizedLuminanceContrast            
         };
     }
 }
