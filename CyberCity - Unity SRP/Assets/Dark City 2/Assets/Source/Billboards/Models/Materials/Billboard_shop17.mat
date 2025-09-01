@@ -2,19 +2,24 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!21 &2100000
 Material:
-  serializedVersion: 6
+  serializedVersion: 8
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
   m_Name: Billboard_shop17
   m_Shader: {fileID: 4800000, guid: 4535da714c5d3fa4fa8be92d3c0bea96, type: 3}
-  m_ShaderKeywords: 
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
   m_LightmapFlags: 0
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -36,6 +41,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
         m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Color:
+        m_Texture: {fileID: 2800000, guid: 29c25a5b42d682d459e0d4687b465e1a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Decription:
@@ -81,7 +90,7 @@ Material:
     - _Logo:
         m_Texture: {fileID: 2800000, guid: b32275fd5ca597a48a687408107debb6, type: 3}
         m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
+        m_Offset: {x: -0.01, y: 0}
     - _MainTex:
         m_Texture: {fileID: 2800000, guid: e84b81d35ccaf294fa765df656ae1f16, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -142,6 +151,7 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    m_Ints: []
     m_Floats:
     - _BackgroundEm: 0.5
     - _BackgroundEmission: 1
@@ -199,3 +209,5 @@ Material:
     - _Glitch2: {r: 0.10946956, g: 0.23487085, b: 0.5660378, a: 0}
     - _Size: {r: 10.38, g: -0.63, b: 1, a: 1}
     - _SlideSpeed: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

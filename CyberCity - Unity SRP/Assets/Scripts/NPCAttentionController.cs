@@ -32,7 +32,7 @@ public class NPCAttentionController : MonoBehaviour
         Vector3 direction = (target.position - headBone.position).normalized;
 
         // LookRotation assumes head forward = +Z
-        Quaternion targetRotation = Quaternion.LookRotation(direction);
+        Quaternion targetRotation = Quaternion.LookRotation(direction);//Character is not positioned appropriately
 
         headBone.rotation = Quaternion.Slerp(
             headBone.rotation,
