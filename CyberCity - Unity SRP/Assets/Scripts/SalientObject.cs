@@ -12,7 +12,7 @@ public class SalientObject : MonoBehaviour
     private Transform npcEyeTransform;
     [Tooltip("Optional: Assign the material to be analyzed for color/luminance. " +
              "If left empty, the first Renderer.material will be used.")]
-    [SerializeField] private Material targetMaterial;
+    [SerializeField] private Texture2D targetTexture;
     //[SerializeField] private Color backgroundColor;
 
     [Header("Parameters")]
@@ -36,12 +36,13 @@ public class SalientObject : MonoBehaviour
     {
         lastPosition = transform.position;
 
-        if (targetMaterial == null)
-        {
-            Renderer rend = GetComponent<Renderer>();
-            if (rend != null && rend.sharedMaterial != null)
-                targetMaterial = rend.sharedMaterial;
-        }
+        //if (targetMaterial == null)
+        //{
+        //    Renderer rend = GetComponent<Renderer>();
+        //    if (rend != null && rend.sharedMaterial != null)
+        //        targetMaterial = rend.sharedMaterial;
+        //}
+        rend = GetComponent<Renderer>();
 
         npcEyeTransform = Camera.main?.transform; // Default to main camera if not set
                         
@@ -81,20 +82,20 @@ public class SalientObject : MonoBehaviour
     {
         backgroundColor = Camera.main != null ? Camera.main.backgroundColor : Color.gray;
 
-        if (targetMaterial == null)
-        {
-            normalizedColorContrast = 0f;
-            normalizedLuminanceContrast = 0f;
-            return;
-        }
+        //if (targetMaterial == null)
+        //{
+        //    normalizedColorContrast = 0f;
+        //    normalizedLuminanceContrast = 0f;
+        //    return;
+        //}
 
-        Color avgColor = targetMaterial.color; // fallback
+        Color avgColor = rend != null ? rend.material.color : Color.white;
 
-        if (targetMaterial.mainTexture is Texture2D tex2D)
+        if (targetTexture != null)
         {
             try
             {
-                Color[] pixels = tex2D.GetPixels();
+                Color[] pixels = targetTexture.GetPixels();
                 if (pixels.Length > 0)
                 {
                     avgColor = Color.black;
