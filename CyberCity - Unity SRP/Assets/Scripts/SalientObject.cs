@@ -8,10 +8,8 @@ public class SalientObject : MonoBehaviour
 {
    
     [Header("References")]
-    [Tooltip("Transform of the NPC's head/eye used for proximity calculations.")]
     private Transform npcEyeTransform;
-    [Tooltip("Optional: Assign the material to be analyzed for color/luminance. " +
-             "If left empty, the first Renderer.material will be used.")]
+    [Tooltip("Optional: Assign the material to be analyzed for color/luminance. ")]
     [SerializeField] private Texture2D targetTexture;
     //[SerializeField] private Color backgroundColor;
 
@@ -27,13 +25,19 @@ public class SalientObject : MonoBehaviour
     [SerializeField, ReadOnly] private float normalizedColorContrast;
     [SerializeField, ReadOnly] private float normalizedLuminanceContrast;
     [SerializeField, ReadOnly] private Color backgroundColor;
+    [SerializeField, ReadOnly] private int objectID;
+    
 
     // Cached values
     private Vector3 lastPosition;
     private Renderer rend;
+    private static int nextID = 0;
+    public int ObjectID => objectID;
 
     private void Awake()
     {
+        objectID = nextID++;
+
         lastPosition = transform.position;
 
         //if (targetMaterial == null)
