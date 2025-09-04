@@ -69,16 +69,17 @@ public class SaliencyScoreCalculator : MonoBehaviour
                     bestTransform = obj.transform;
                 }
             }
-
-            LogObjectData(frame, obj, motion, proximity, color, luminance);
+            bool isBest = (bestTransform == obj.transform);
+            LogObjectData(frame, obj, motion, proximity, color, luminance, isBest);
         }
 
         mostSalientScore = bestScore;
         mostSalientObject = bestTransform;
     }
        
-    private void LogObjectData(int frame, SalientObject obj, float motion, float proximity, float color, float luminance)
+    private void LogObjectData(int frame, SalientObject obj, float motion, float proximity, float color, float luminance, bool isBest)
     {
+        int isLooking = isBest ? 1 : 0;
         Vector3 pos = obj.transform.position;
         string line = $"{frame},{obj.ObjectID},{pos.x:F2},{pos.y:F2},{pos.z:F2},{motion:F4},{proximity:F4},{color:F4},{luminance:F4}";
         WriteCSVLine(line);
