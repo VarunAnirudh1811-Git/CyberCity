@@ -45494,7 +45494,7 @@ MonoBehaviour:
   proximityWeight: 0.397
   colorWeight: 0.396
   luminanceWeight: 0.408
-  attentionRange: 70
+  attentionRange: 100
   mostSalientObject: {fileID: 0}
   mostSalientScore: 0
   npcEyeTransform: {fileID: 0}
