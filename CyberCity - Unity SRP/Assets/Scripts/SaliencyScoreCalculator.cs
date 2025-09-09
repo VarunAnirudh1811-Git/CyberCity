@@ -7,12 +7,9 @@ using UnityEngine;
 
 public class SaliencyScoreCalculator : MonoBehaviour
 {
-    [Header("Empirical Equation Weights")]
-    [SerializeField] [Range(0f, 1f)] private float motionWeight = 0.25f;
-    [SerializeField] [Range(0f, 1f)] private float proximityWeight = 0.25f;
-    [SerializeField] [Range(0f, 1f)] private float colorWeight = 0.25f;
-    [SerializeField] [Range(0f, 1f)] private float luminanceWeight = 0.25f;
-    [SerializeField] private float attentionRange = 20f; // max distance NPC can "see"
+    [Header("References")]
+    [SerializeField] private Camera referenceCamera;
+    [SerializeField] private float attentionRange = 50f; // max distance NPC can "see"
 
     [Header("Debug (Read-Only)")]
     [SerializeField, ReadOnly] private Transform mostSalientObject;
@@ -29,7 +26,7 @@ public class SaliencyScoreCalculator : MonoBehaviour
         npcEyeTransform = Camera.main?.transform; // Default to main camera if not set
 
         Debug.Log("Logging saliency data to: " + csvPath);
-        WriteCSVLine("Frame,ObjectID,PosX,PosY,PosZ,Motion,Proximity,Color,Luminance,Score,IsBest");
+        WriteCSVLine("Frame,ObjectID,PosX,PosY,PosZ,Motion,Proximity,Color,Luminance,IsBest");
     }
 
     private void Update()
@@ -37,38 +34,77 @@ public class SaliencyScoreCalculator : MonoBehaviour
         CalculateSaliencyScores();
     }
 
-    
+
     /// Main saliency calculation loop – finds the most salient object.
-    
+
     private void CalculateSaliencyScores()
     {
         float bestScore = -1f;
         Transform bestTransform = null;
         int frame = Time.frameCount;
 
+        // Gather lists of cues for adaptive weight calculation
+        List<float> motions = new List<float>();
+        List<float> proximities = new List<float>();
+        List<float> colors = new List<float>();
+        List<float> luminances = new List<float>();
+        List<float> angulars = new List<float>();
+
         foreach (var obj in salientObjects)
         {
             if (obj == null) continue;
-                        
+            Renderer rend = obj.GetComponentInChildren<Renderer>();
+            if (rend == null || !IsVisibleToCamera(rend, referenceCamera, obj)) continue;
+
+            motions.Add(obj.NormalizedMotion);
+            proximities.Add(obj.SizeByProximity);
+            colors.Add(obj.NormalizedColorContrast);
+            luminances.Add(obj.NormalizedLuminanceContrast);
+            angulars.Add(obj.NormalizedAngularVelocity);
+        }
+
+        // Compute spreads
+        float spreadM = ComputeSpread(motions);
+        float spreadP = ComputeSpread(proximities);
+        float spreadC = ComputeSpread(colors);
+        float spreadL = ComputeSpread(luminances);
+        float spreadA = ComputeSpread(angulars);
+
+        float totalSpread = spreadM + spreadP + spreadC + spreadL + spreadA + 1e-6f;
+
+        // Normalize to adaptive weights
+        float wM = spreadM / totalSpread;
+        float wP = spreadP / totalSpread;
+        float wC = spreadC / totalSpread;
+        float wL = spreadL / totalSpread;
+        float wA = spreadA / totalSpread;
+
+        #if UNITY_EDITOR
+        Debug.Log($"Adaptive Weights → M:{wM:F2}, A:{wA:F2}, P:{wP:F2}, C:{wC:F2}, L:{wL:F2}");
+        #endif
+
+        // Now compute per-object scores with adaptive weights
+        foreach (var obj in salientObjects)
+        {
+            if (obj == null) continue;
+            Renderer rend = obj.GetComponentInChildren<Renderer>();
+            if (rend == null || !IsVisibleToCamera(rend, referenceCamera, obj)) continue;
+
             float motion = obj.NormalizedMotion;
-            float proximity = obj.NormalizedProximity;
+            float proximity = obj.SizeByProximity;
             float color = obj.NormalizedColorContrast;
             float luminance = obj.NormalizedLuminanceContrast;
+            float angularVelocity = obj.NormalizedAngularVelocity;
 
-            // Call the score function
-            float saliencyScore = ComputeScore(motion, proximity, color, luminance);
+            float saliencyScore = ComputeScore(motion, proximity, color, luminance, angularVelocity,
+                                               wM, wP, wC, wL, wA);
 
-            float distance = Vector3.Distance(npcEyeTransform.position, obj.transform.position);
-            // Track most salient
-            Renderer rend = obj.GetComponentInChildren<Renderer>();
-            if (rend != null && rend.isVisible && saliencyScore > bestScore)
+            if (saliencyScore > bestScore)
             {
-                if (distance <= attentionRange)   // 👈 Only accept if within range
-                {
-                    bestScore = saliencyScore;
-                    bestTransform = obj.transform;
-                }
+                bestScore = saliencyScore;
+                bestTransform = obj.transform;
             }
+
             bool isBest = (bestTransform == obj.transform);
             LogObjectData(frame, obj, motion, proximity, color, luminance, isBest);
         }
@@ -76,12 +112,12 @@ public class SaliencyScoreCalculator : MonoBehaviour
         mostSalientScore = bestScore;
         mostSalientObject = bestTransform;
     }
-       
+
     private void LogObjectData(int frame, SalientObject obj, float motion, float proximity, float color, float luminance, bool isBest)
     {
         int isLooking = isBest ? 1 : 0;
         Vector3 pos = obj.transform.position;
-        string line = $"{frame},{obj.ObjectID},{pos.x:F2},{pos.y:F2},{pos.z:F2},{motion:F4},{proximity:F4},{color:F4},{luminance:F4}";
+        string line = $"{frame},{obj.ObjectID},{pos.x:F2},{pos.y:F2},{pos.z:F2},{motion:F4},{proximity:F4},{color:F4},{luminance:F4},{isLooking}";
         WriteCSVLine(line);
     }
 
@@ -101,13 +137,14 @@ public class SaliencyScoreCalculator : MonoBehaviour
     }
 
     /// Computes saliency score from four normalized cues.
-    public float ComputeScore(float motion, float proximity, float color, float luminance)
+    public float ComputeScore(float motion, float proximity, float color, float luminance, float angularVelocity,
+                          float wM, float wP, float wC, float wL, float wA)
     {
-        float score =
-            (motionWeight * motion) +
-            (proximityWeight * proximity) +
-            (colorWeight * color) +
-            (luminanceWeight * luminance);
+        float score = ((wM * motion) +
+                      (wP * proximity) +
+                      (wC * color) +
+                      (wL * luminance) +
+                      (wA * angularVelocity)) / 5; // This is to keep it in [0,1] range
 
         return Mathf.Clamp01(score);
     }
@@ -120,19 +157,23 @@ public class SaliencyScoreCalculator : MonoBehaviour
     {
         return mostSalientObject;
     }
-
-    private bool IsVisibleToNPC(Transform target)
+        
+    private bool IsVisibleToCamera(Renderer rend, Camera cam, SalientObject obj)
     {
-        if (npcEyeTransform == null) return false;
+        if (cam == null) return false;
+        Plane[] planes      = GeometryUtility.CalculateFrustumPlanes(cam);
+        float distance      = Vector3.Distance(npcEyeTransform.position, obj.transform.position);
+        bool inView         = ((GeometryUtility.TestPlanesAABB(planes, rend.bounds)) && (distance <= attentionRange));
 
-        Vector3 dir = (target.position - npcEyeTransform.position).normalized;
-        float dist = Vector3.Distance(npcEyeTransform.position, target.position);
+        return inView;
+    }
 
-        if (Physics.Raycast(npcEyeTransform.position, dir, out RaycastHit hit, dist))
-        {
-            return hit.transform == target; // Only visible if first hit is the target
-        }
-
-        return false;
+    private float ComputeSpread(List<float> values)
+    {
+        if (values.Count == 0) return 0f;
+        values.Sort();
+        int p10 = Mathf.FloorToInt(0.1f * (values.Count - 1));
+        int p90 = Mathf.FloorToInt(0.9f * (values.Count - 1));
+        return Mathf.Max(0f, values[p90] - values[p10]);
     }
 }

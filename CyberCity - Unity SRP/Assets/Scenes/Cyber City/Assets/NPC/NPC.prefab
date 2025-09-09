@@ -178,6 +178,8 @@ MonoBehaviour:
   headBone: {fileID: 9091261559226530773}
   saliencyCalculator: {fileID: 0}
   headTurnSpeed: 3
+  maxHorizontalAngle: 80
+  maxVerticalAngle: 45
 --- !u!4 &9091261559226530773 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -3321919801592875672, guid: 36a6532069bf20d48af749b3055be22d, type: 3}

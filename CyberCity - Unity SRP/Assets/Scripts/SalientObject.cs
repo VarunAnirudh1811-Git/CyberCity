@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 
 /// Represents an object that can be attended to in a rule-based visual attention system.
@@ -6,132 +7,144 @@ using UnityEngine;
 
 public class SalientObject : MonoBehaviour
 {
-   
+
     [Header("References")]
     private Transform npcEyeTransform;
     [Tooltip("Optional: Assign the material to be analyzed for color/luminance. ")]
     [SerializeField] private Texture2D targetTexture;
+    [SerializeField] private Collider objectCollider;
     //[SerializeField] private Color backgroundColor;
 
     [Header("Parameters")]
     [Tooltip("Sigma value for divisive normalization in motion cue.")]
-    [SerializeField] private float sigma = 0.1f;
-    [Tooltip("Maximum distance considered for proximity cue.")]
-    [SerializeField] private float maxDistance = 10f;
+    [SerializeField] private float sigma = 10f;
+    [SerializeField] private float angularSigma = 180f; // tune this value: at 180 deg/sec, output = 0.5
 
     [Header("Debug (Read-Only)")]
     [SerializeField, ReadOnly] private float normalizedMotion;
-    [SerializeField, ReadOnly] private float normalizedProximity;
+    [SerializeField, ReadOnly] private float sizeByProximity;
     [SerializeField, ReadOnly] private float normalizedColorContrast;
     [SerializeField, ReadOnly] private float normalizedLuminanceContrast;
+    [SerializeField, ReadOnly] private float normalizedAngularVelocity;
     [SerializeField, ReadOnly] private Color backgroundColor;
     [SerializeField, ReadOnly] private int objectID;
-    
+    [SerializeField, ReadOnly] private Color avgColorDebug;
+
 
     // Cached values
     private Vector3 lastPosition;
+    private Quaternion lastRotation;
     private Renderer rend;
     private static int nextID = 0;
+    private float rootThree;
     public int ObjectID => objectID;
 
     private void Awake()
     {
-        objectID = nextID++;
+        objectID            = nextID++;
+        rootThree           = Mathf.Sqrt(3f); // For color contrast normalization
 
-        lastPosition = transform.position;
+        lastPosition        = transform.position;
 
-        //if (targetMaterial == null)
-        //{
-        //    Renderer rend = GetComponent<Renderer>();
-        //    if (rend != null && rend.sharedMaterial != null)
-        //        targetMaterial = rend.sharedMaterial;
-        //}
-        rend = GetComponent<Renderer>();
+        rend                = GetComponent<Renderer>();
 
-        npcEyeTransform = Camera.main?.transform; // Default to main camera if not set
+        npcEyeTransform     = Camera.main?.transform; // Default to main camera if not set
                         
     }
 
     private void Update()
     {
         ComputeMotion();
-        ComputeProximity();
+        ComputeSizeByProximity();
         ComputeColorAndLuminanceContrast();
+        ComputeAngularVelocity();
     }
-
-    /// Computes motion cue using divisive normalization.
+        
     private void ComputeMotion()
     {
-        float displacement = (transform.position - lastPosition).magnitude;
-        float speed = displacement / Mathf.Max(Time.deltaTime, 1e-6f);
-        normalizedMotion = speed / (speed + sigma);
-        lastPosition = transform.position;
-    }
+        float displacement  = (transform.position - lastPosition).magnitude;
+        float speed         = displacement / Mathf.Max(Time.deltaTime, 1e-6f);
 
-    /// Computes proximity cue relative to NPC eye transform. 
-    private void ComputeProximity()
+        normalizedMotion    = speed / (speed + sigma);
+
+        lastPosition        = transform.position;
+    }
+    private void ComputeAngularVelocity()
     {
-        if (npcEyeTransform == null)
+        Quaternion deltaRotation        = transform.rotation * Quaternion.Inverse(lastRotation);
+        deltaRotation.ToAngleAxis(out float angle, out _);
+        float angularSpeed              = angle / Mathf.Max(Time.deltaTime, 1e-6f);
+        
+        normalizedAngularVelocity       = angularSpeed / (angularSpeed + angularSigma);
+        lastRotation                    = transform.rotation;
+    }        
+    private void ComputeSizeByProximity()
+    {
+        if (npcEyeTransform == null || objectCollider == null)
         {
-            normalizedProximity = 0f;
+            sizeByProximity = 0f;            
             return;
         }
-
-        float distance = Vector3.Distance(transform.position, npcEyeTransform.position);
-        normalizedProximity = 1f - Mathf.Clamp01(distance / maxDistance);
+        float size          = Mathf.Max(objectCollider.bounds.size.x, objectCollider.bounds.size.y, objectCollider.bounds.size.z);
+        float distance      = Vector3.Distance(transform.position, npcEyeTransform.position);
+        
+        sizeByProximity     = size/ (size + distance);
     }
-
-    /// <summary> Computes average albedo color (from texture or material) and derives color & luminance contrast. </summary>
     private void ComputeColorAndLuminanceContrast()
     {
-        backgroundColor = Camera.main != null ? Camera.main.backgroundColor : Color.gray;
+        backgroundColor     = Camera.main != null ? Camera.main.backgroundColor : Color.gray;
 
-        //if (targetMaterial == null)
-        //{
-        //    normalizedColorContrast = 0f;
-        //    normalizedLuminanceContrast = 0f;
-        //    return;
-        //}
-
-        Color avgColor = rend != null ? rend.material.color : Color.white;
+        Color avgColor      = Color.white;
 
         if (targetTexture != null)
         {
             try
             {
-                Color[] pixels = targetTexture.GetPixels();
-                if (pixels.Length > 0)
+                Color32[] texColors = targetTexture.GetPixels32();
+                int total = texColors.Length;
+                if (total == 0) avgColor = Color.white;
+
+                float r = 0f, g = 0f, b = 0f;
+
+                for (int i = 0; i < total; i++)
                 {
-                    avgColor = Color.black;
-                    foreach (var c in pixels)
-                        avgColor += c;
-                    avgColor /= pixels.Length;
+                    r += texColors[i].r;
+                    g += texColors[i].g;
+                    b += texColors[i].b;
                 }
+
+                // Divide by total and normalize to [0..1]
+                float rf = r / (255f * total);
+                float gf = g / (255f * total);
+                float bf = b / (255f * total);
+
+                avgColor = new Color(rf, gf, bf, 1f); // full alpha
             }
             catch
             {
-                // Texture not readable → stick with material color
+                // Not readable, fallback
+                avgColor = Color.white;
             }
         }
 
         // --- Color Contrast (Euclidean distance in RGB) ---
-        float colorDist = Vector3.Distance(
+        float colorDist = Vector3.Distance (
         new Vector3(avgColor.r, avgColor.g, avgColor.b),
-        new Vector3(backgroundColor.r, backgroundColor.g, backgroundColor.b)
-        );
-        normalizedColorContrast = Mathf.Clamp01(colorDist);
+        new Vector3(backgroundColor.r, backgroundColor.g, backgroundColor.b) );
+        normalizedColorContrast = Mathf.Clamp01(colorDist / rootThree);
 
         // --- Luminance Contrast ---
         float objLum = 0.2126f * avgColor.r + 0.7152f * avgColor.g + 0.0722f * avgColor.b;
         float bgLum = 0.2126f * backgroundColor.r + 0.7152f * backgroundColor.g + 0.0722f * backgroundColor.b;
 
         float lumContrast = Mathf.Abs(objLum - bgLum);
-        normalizedLuminanceContrast = Mathf.Clamp01(lumContrast);
+        normalizedLuminanceContrast = lumContrast;
     }
 
     /// <summary> Expose raw normalized cues. </summary>
     public float NormalizedMotion => normalizedMotion;
-    public float NormalizedProximity => normalizedProximity;
+    public float SizeByProximity => sizeByProximity;
+    public float NormalizedAngularVelocity => normalizedAngularVelocity;
     public float NormalizedColorContrast => normalizedColorContrast;
     public float NormalizedLuminanceContrast => normalizedLuminanceContrast;
 
@@ -141,12 +154,15 @@ public class SalientObject : MonoBehaviour
         return new float[]
         {
             normalizedMotion,
-            normalizedProximity,
+            sizeByProximity,
+            normalizedAngularVelocity,
             normalizedColorContrast,
             normalizedLuminanceContrast            
         };
     }
 }
+
+
 
 #region --- ReadOnly Inspector Support ---
 public class ReadOnlyAttribute : PropertyAttribute { }
