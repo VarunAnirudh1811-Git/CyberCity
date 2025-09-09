@@ -26,7 +26,7 @@ public class SaliencyScoreCalculator : MonoBehaviour
         npcEyeTransform = Camera.main?.transform; // Default to main camera if not set
 
         Debug.Log("Logging saliency data to: " + csvPath);
-        WriteCSVLine("Frame,ObjectID,PosX,PosY,PosZ,Motion,Proximity,Color,Luminance,IsBest");
+        WriteCSVLine("Frame,ObjectID,PosX,PosY,PosZ,Motion,AngularVelocity,Proximity,Color,Luminance,IsBest");
     }
 
     private void Update()
@@ -106,18 +106,18 @@ public class SaliencyScoreCalculator : MonoBehaviour
             }
 
             bool isBest = (bestTransform == obj.transform);
-            LogObjectData(frame, obj, motion, proximity, color, luminance, isBest);
+            LogObjectData(frame, obj, motion, angularVelocity, proximity, color, luminance, isBest);
         }
 
         mostSalientScore = bestScore;
         mostSalientObject = bestTransform;
     }
 
-    private void LogObjectData(int frame, SalientObject obj, float motion, float proximity, float color, float luminance, bool isBest)
+    private void LogObjectData(int frame, SalientObject obj, float motion, float angularVelocity, float proximity, float color, float luminance, bool isBest)
     {
         int isLooking = isBest ? 1 : 0;
         Vector3 pos = obj.transform.position;
-        string line = $"{frame},{obj.ObjectID},{pos.x:F2},{pos.y:F2},{pos.z:F2},{motion:F4},{proximity:F4},{color:F4},{luminance:F4},{isLooking}";
+        string line = $"{frame},{obj.ObjectID},{pos.x:F2},{pos.y:F2},{pos.z:F2},{motion:F4},{angularVelocity:F4},{proximity:F4},{color:F4},{luminance:F4},{isLooking}";
         WriteCSVLine(line);
     }
 
