@@ -33,7 +33,7 @@ public class SalientObject : MonoBehaviour
 
     // Cached values
     private Vector3 lastPosition;
-    private Quaternion lastRotation;
+    private Vector3 lastLOS;
     private Renderer rend;
     private static int nextID = 0;
     private float rootThree;
@@ -71,13 +71,15 @@ public class SalientObject : MonoBehaviour
     }
     private void ComputeAngularVelocity()
     {
-        Quaternion deltaRotation        = transform.rotation * Quaternion.Inverse(lastRotation);
-        deltaRotation.ToAngleAxis(out float angle, out _);
-        float angularSpeed              = angle / Mathf.Max(Time.deltaTime, 1e-6f);
-        
-        normalizedAngularVelocity       = angularSpeed / (angularSpeed + angularSigma);
-        lastRotation                    = transform.rotation;
-    }        
+        Vector3 CurrentLOS = (npcEyeTransform.position - transform.position);
+
+        float angle = Vector3.Angle(CurrentLOS, lastLOS);
+        float velocityAngular = angle / Mathf.Max(Time.deltaTime, 1e-6f); // deg/sec
+        normalizedAngularVelocity = velocityAngular / (velocityAngular + angularSigma);
+
+        lastLOS = (npcEyeTransform.position - lastPosition);
+
+    }
     private void ComputeSizeByProximity()
     {
         if (npcEyeTransform == null || objectCollider == null)
