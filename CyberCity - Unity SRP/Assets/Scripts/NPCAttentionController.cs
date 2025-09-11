@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using Unity.VisualScripting;
 using UnityEngine;
 using static TMPro.SpriteAssetUtilities.TexturePacker_JsonArray;
 using static UnityEditor.PlayerSettings;
@@ -10,28 +11,41 @@ public class NPCAttentionController : MonoBehaviour
     [Header("References")]
     [SerializeField] private Transform headBone;
     [SerializeField] private SaliencyScoreCalculator saliencyCalculator;
+    [SerializeField] private InputReader inputReader;   
 
-    [Header("Head Movement Settings")]
+    [Header("Movement Settings")]
+    [SerializeField] private float rotationSpeed = 120f;
     [SerializeField] private float headTurnSpeed = 3.0f;
     [SerializeField] private float maxHorizontalAngle = 80.0f;
     [SerializeField] private float maxVerticalAngle = 45.0f;
 
     private Transform currentTarget;
     private string csvPath;
+    private Vector2 moveInput;
 
+    private void OnEnable()
+    {
+        inputReader.MoveEvent += OnMove;
+    }
+
+    private void OnDisable()
+    {
+        inputReader.MoveEvent -= OnMove;
+    }
     private void Start()
     {
         csvPath = Path.Combine(Application.persistentDataPath, "SaliencyLogOutput.csv");
 
         if (!File.Exists(csvPath))
         {
-            WriteCSVLine("Frame,ForwardX,ForwardY,ForwardZ");
+            WriteCSVLine("Frame,BodyForwardX,BodyForwardY,BodyForwardZ,HeadForwardX,HeadForwardY,HeadForwardZ");
         }
     }
 
 
     private void Update()
     {
+        HandleRotation();
         // Ask calculator which object is most salient (and visible)
         currentTarget = saliencyCalculator.GetMostSalientObject();
 
@@ -97,10 +111,26 @@ public class NPCAttentionController : MonoBehaviour
 
         return true;
     }
+    private void HandleRotation()
+    {
+        Vector3 inputDir = new Vector3(moveInput.x, 0, moveInput.y).normalized;
+
+        if (inputDir.sqrMagnitude > 0.01f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(inputDir, Vector3.up);
+
+            transform.rotation = Quaternion.RotateTowards(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
+        }
+    }
     private void LogNPCForward(int frame, Transform headBone)
     {
-        Vector3 forward = headBone.transform.forward;
-        string line = $"{frame},{forward.x:F2},{forward.y:F2},{forward.z:F2}";
+        Vector3 Bforward = transform.forward;
+        Vector3 Hforward = headBone.transform.forward;
+        string line = $"{frame},{Bforward.x:F2},{Bforward.y:F2},{Bforward.z:F2},{Hforward.x:F2},{Hforward.y:F2},{Hforward.z:F2}";
 
         WriteCSVLine(line);
     }
@@ -118,5 +148,10 @@ public class NPCAttentionController : MonoBehaviour
         {
             Debug.LogError("CSV Write Error: " + e.Message);
         }
+    }
+
+    private void OnMove(Vector2 input)
+    {
+        moveInput = input;
     }
 }

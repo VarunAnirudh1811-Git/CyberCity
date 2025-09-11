@@ -10,31 +10,31 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 05439fe9eea2b4746a8a3502a00a0ae9, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 20.337963
+      value: -21.398172
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05439fe9eea2b4746a8a3502a00a0ae9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -9.5408745
+      value: 4.589999
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05439fe9eea2b4746a8a3502a00a0ae9, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -45.980118
+      value: 27.489933
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05439fe9eea2b4746a8a3502a00a0ae9, type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.0023087037
+      value: 0.70710796
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05439fe9eea2b4746a8a3502a00a0ae9, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.0000044733447
+      value: -0.000000044339377
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05439fe9eea2b4746a8a3502a00a0ae9, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.9999972
+      value: -0.7071056
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05439fe9eea2b4746a8a3502a00a0ae9, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.0005738029
+      value: 0.000000044339526
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 05439fe9eea2b4746a8a3502a00a0ae9, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -87,7 +87,7 @@ MonoBehaviour:
   m_PlayOnAwake: 1
   m_LoopMode: 1
   m_Method: 1
-  m_Duration: 52.74029
+  m_Duration: 111.59049
   m_MaxSpeed: 12
   m_EasingMode: 0
   m_AlignmentMode: 1
@@ -109,11 +109,12 @@ MonoBehaviour:
   targetTexture: {fileID: 2800000, guid: 571f256b5088f5c4f949a39c7999a8c5, type: 3}
   objectCollider: {fileID: 6758634484504441982}
   sigma: 5
-  maxDistance: 1000
+  angularSigma: 180
   normalizedMotion: 0
   sizeByProximity: 0
   normalizedColorContrast: 0
   normalizedLuminanceContrast: 0
+  normalizedAngularVelocity: 0
   backgroundColor: {r: 0, g: 0, b: 0, a: 0}
   objectID: 0
   avgColorDebug: {r: 0, g: 0, b: 0, a: 0}

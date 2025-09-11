@@ -44,7 +44,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Color:
-        m_Texture: {fileID: 2800000, guid: 29c25a5b42d682d459e0d4687b465e1a, type: 3}
+        m_Texture: {fileID: 2800000, guid: 3a83f4cdf82f17b449b247dd376278bb, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Decription:
@@ -153,7 +153,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _BackgroundEm: 0.5
+    - _BackgroundEm: 1
     - _BackgroundEmission: 1
     - _BumpScale: 1
     - _Columns: 16
@@ -168,11 +168,11 @@ Material:
     - _EmissionAlbedo: 0.725
     - _EmissionLED: 0.389
     - _Float0: 0.01
-    - _GlitchIntensity: 1
+    - _GlitchIntensity: 0.435
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _LEDint: 1
+    - _LEDint: 0.371
     - _LogoSpeedH: 0.2
     - _LogoSpeedV: 0
     - _Metallic: 0
@@ -199,7 +199,7 @@ Material:
     - _ZWrite: 1
     - __dirty: 0
     m_Colors:
-    - _AlbedoColor: {r: 0.5471698, g: 0.5471698, b: 0.5471698, a: 1}
+    - _AlbedoColor: {r: 1, g: 1, b: 1, a: 1}
     - _BlendColor: {r: 0, g: 0.13103437, b: 1, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 0}
     - _Color0: {r: 0.16911763, g: 0.16911763, b: 0.16911763, a: 0}
