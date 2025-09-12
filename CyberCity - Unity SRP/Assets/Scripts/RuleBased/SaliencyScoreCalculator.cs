@@ -30,7 +30,7 @@ public class SaliencyScoreCalculator : MonoBehaviour
         Debug.Log("Logging saliency data to: " + csvPath);
         WriteCSVLine("Frame,ObjectID,PosX,PosY,PosZ,Motion,AngularVelocity,Proximity,Color,Luminance,IsBest", csvPath);
         WriteCSVLine("Frame,WeightM,WeightA,WeightP,WeightC,WeightL", csvPath2);
-    }
+    } 
 
     private void Update()
     {
@@ -177,8 +177,16 @@ public class SaliencyScoreCalculator : MonoBehaviour
         }
 
 
-        mostSalientScore = bestScore;
-        mostSalientObject = bestObj.transform;
+        if (bestObj != null)
+        {
+            mostSalientScore = bestScore;
+            mostSalientObject = bestObj.transform;
+        }
+        else
+        {
+            mostSalientScore = -1f;
+            mostSalientObject = null;
+        }
     }
 
     private void LogObjectData(int frame, SalientObject obj, float motion, float angularVelocity, float proximity, float color, float luminance, bool isBest)

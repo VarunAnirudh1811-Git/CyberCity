@@ -160,6 +160,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 36a6532069bf20d48af749b3055be22d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6028139344400585056}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 36a6532069bf20d48af749b3055be22d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5640681505358171078}
   m_SourcePrefab: {fileID: 100100000, guid: 36a6532069bf20d48af749b3055be22d, type: 3}
 --- !u!1 &2525926084112364524 stripped
 GameObject:
@@ -197,6 +200,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd1e958a722e5fd4e8d19bb7590a9ca2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &5640681505358171078
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2525926084112364524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0ec83c0b1bf3df42a4e10fdb178d481, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onnxModelAsset: {fileID: 0}
+  useClassificationModel: 1
+  headTransform: {fileID: 0}
+  bodyTransform: {fileID: 0}
+  rotationSpeed: 5
 --- !u!4 &9091261559226530773 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -3321919801592875672, guid: 36a6532069bf20d48af749b3055be22d, type: 3}
